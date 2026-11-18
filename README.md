@@ -91,36 +91,48 @@ Advanced-RAG/
 
 ---
 
-## Getting Started
+## Getting Started with Docker (Recommended)
 
-### 1. Prerequisites (System Dependencies)
-The layout analysis engine requires system-level tools:
-- **Poppler** (PDF rendering):
-  - *Windows*: Download Poppler for Windows and add `bin/` to your PATH.
-  - *Ubuntu/Debian*: `sudo apt-get install -y poppler-utils`
-  - *macOS*: `brew install poppler`
-- **Tesseract OCR** (Image text extraction):
-  - *Windows*: Install via installer and add to PATH.
-  - *Ubuntu/Debian*: `sudo apt-get install -y tesseract-ocr`
-  - *macOS*: `brew install tesseract`
+Using Docker completely eliminates the need to install Windows binaries (Poppler, Tesseract-OCR, libmagic) manually.
 
-### 2. Environment Setup
-
-```bash
-# Clone the repository
-git clone https://github.com/AshutoshRanjan31/Advanced-RAG.git
-cd Advanced-RAG
-
-# Create virtual environment
-python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/macOS:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+### 1. Configure `.env`
+Ensure your `.env` contains your API key:
+```env
+GOOGLE_API_KEY=your_gemini_api_key_here
 ```
+
+### 2. Build the Docker Image
+```bash
+docker compose build
+```
+
+### 3. Launch the Web Chat Interface
+You can launch the full interactive web application in your browser:
+```bash
+docker compose up
+```
+Open **`http://localhost:8501`** in your browser!
+- Upload new PDFs and trigger ingestion with a click.
+- Ask questions and view answers.
+- Inspect the **reconstructed HTML tables** and **extracted diagrams** used by the Vision LLM for grounding.
+
+### 4. CLI Ingestion (Alternative)
+Place your PDF into `data/docs/` (e.g. `data/docs/attention-is-all-you-need.pdf`), then run:
+```bash
+docker compose run --rm rag python scripts/ingest.py --file data/docs/attention-is-all-you-need.pdf
+```
+*(All data, caches, and ChromaDB vector stores persist automatically in your local `data/` folder on your host machine!)*
+
+### 5. CLI Query (Alternative)
+```bash
+docker compose run --rm rag python scripts/query.py --query "How many attention heads does the Transformer use?" --sources
+```
+
+---
+
+## Local Setup (Alternative)
+
+If running directly on host without Docker:
 
 ### 3. Configure API Keys
 Copy `.env.example` to `.env` and add your Google Gemini API key:

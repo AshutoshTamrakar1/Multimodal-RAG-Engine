@@ -1,0 +1,15 @@
+__pycache__
+*.py[cod]
+*$py.class
+.git
+.gitignore
+.env
+.env.example
+data/cache/*
+!data/cache/.gitkeep
+data/chroma_db/*
+!data/chroma_db/.gitkeep
+data/docs/*
+!data/docs/.gitkeep
+.vscode
+.idea

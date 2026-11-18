@@ -19,8 +19,8 @@ CHROMA_DIR.mkdir(parents=True, exist_ok=True)
 
 # Model Settings
 # Defaulting to fast, cost-effective vision-capable models
-DEFAULT_LLM_MODEL = os.getenv("LLM_MODEL", "gemini-1.5-flash")
-DEFAULT_EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/text-embedding-004")
+DEFAULT_LLM_MODEL = os.getenv("LLM_MODEL", "gemini-3.1-flash-lite")
+DEFAULT_EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-001")
 LLM_TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", "0.0"))
 
 # Chunking Settings (Structure-Aware)

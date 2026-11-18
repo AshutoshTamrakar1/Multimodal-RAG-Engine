@@ -1,0 +1,21 @@
+services:
+  rag:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: advanced-rag:latest
+    env_file:
+      - .env
+    ports:
+      - "8501:8501"
+    volumes:
+      # Mount data folder so documents, cache, and vector store persist on host
+      - ./data:/app/data
+      # Mount code directories for live development without rebuilding image
+      - ./src:/app/src
+      - ./config:/app/config
+      - ./scripts:/app/scripts
+      - ./app.py:/app/app.py
+    command: ["streamlit", "run", "app.py", "--server.address=0.0.0.0", "--server.port=8501"]
+    stdin_open: true
+    tty: true

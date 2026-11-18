@@ -54,10 +54,15 @@ CONTENT TO ANALYZE:
 
         prompt_text += """
 INSTRUCTIONS:
-1. Provide a comprehensive, accurate answer synthesized from the text, tables, and images above.
-2. If the retrieved documents do not contain enough information to answer the question, clearly state:
+1. Provide a comprehensive, accurate answer synthesized directly from the text, tables, and images provided above.
+2. Structure your answer using clean, well-formatted Markdown:
+   - Use clear sections with bold titles or subheadings.
+   - Use bullet points for lists, key steps, or components.
+   - Format numeric data, metrics, or comparisons into clean Markdown tables.
+   - Use LaTeX syntax for mathematical formulas (e.g., $d_k$, $\text{softmax}(...)$).
+3. Explicitly reference diagrams (e.g., "As seen in Figure 1...") and tables when citing facts.
+4. If the retrieved documents do not contain enough information, clearly state:
    "I don't have enough information to answer that question based on the provided documents."
-3. Cite specific numbers, table rows, and diagram labels when applicable.
 
 ANSWER:"""
 
@@ -77,7 +82,22 @@ ANSWER:"""
 
         message = HumanMessage(content=message_content)
         response = llm.invoke([message])
-        return response.content
+        
+        # Cleanly unpack text content (handles Gemini list-of-blocks format)
+        response_content = response.content
+        if isinstance(response_content, str):
+            return response_content.strip()
+        if isinstance(response_content, list):
+            text_blocks = []
+            for block in response_content:
+                if isinstance(block, str):
+                    text_blocks.append(block)
+                elif isinstance(block, dict) and isinstance(block.get("text"), str):
+                    text_blocks.append(block["text"])
+            if text_blocks:
+                return "\n\n".join(text_blocks).strip()
+                
+        return str(response_content).strip()
 
     except Exception as e:
         print(f"❌ Answer generation failed: {e}")
