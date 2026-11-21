@@ -167,67 +167,77 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Helper function to render evidence block
-def render_evidence_block(evidence_list):
+# --- EVIDENCE RENDERING HELPERS (Decomposed to reduce cognitive complexity) ---
+def _render_chunk_header(chunk: dict) -> None:
+    """Render chunk ID and modality badges."""
+    c_id = chunk.get("chunk_id", "N/A")
+    badges = ['<span class="badge badge-text">Text</span>']
+    if chunk.get("tables_html"):
+        badges.append(f'<span class="badge badge-table">{len(chunk["tables_html"])} Table(s)</span>')
+    if chunk.get("images_base64"):
+        badges.append(f'<span class="badge badge-image">{len(chunk["images_base64"])} Image(s)</span>')
+    st.markdown(f"**Chunk {c_id}** " + " ".join(badges), unsafe_allow_html=True)
+
+
+def _render_tables_tab(tables: list) -> None:
+    """Render extracted HTML tables."""
+    if not tables:
+        st.caption("No tables in this chunk.")
+        return
+    for t_i, tbl in enumerate(tables):
+        st.markdown(f"**Table {t_i + 1}**")
+        st.markdown(tbl, unsafe_allow_html=True)
+
+
+def _render_diagrams_tab(images: list) -> None:
+    """Render extracted base64 diagrams."""
+    if not images:
+        st.caption("No images or diagrams in this chunk.")
+        return
+    for img_i, img_b64 in enumerate(images):
+        try:
+            img = decode_base64_image(img_b64)
+            st.image(img, caption=f"Extracted Diagram {img_i + 1}")
+        except Exception as e:
+            st.caption(f"Error rendering diagram {img_i + 1}: {e}")
+
+
+def _render_single_chunk(chunk: dict) -> None:
+    """Render a single evidence chunk in a tabbed card."""
+    _render_chunk_header(chunk)
+    tabs = st.tabs(["📄 Raw Text", "📊 Tables", "🖼️ Diagrams", "💡 AI Search Summary"])
+
+    with tabs[0]:
+        raw_text = chunk.get("raw_text", "").strip()
+        if raw_text:
+            st.markdown(raw_text)
+        else:
+            st.caption("No standalone narrative text in this chunk.")
+
+    with tabs[1]:
+        _render_tables_tab(chunk.get("tables_html", []))
+
+    with tabs[2]:
+        _render_diagrams_tab(chunk.get("images_base64", []))
+
+    with tabs[3]:
+        summary = chunk.get("search_summary", "").strip()
+        if summary:
+            st.info(summary)
+        else:
+            st.caption("No summary recorded.")
+
+    st.divider()
+
+
+def render_evidence_block(evidence_list: list) -> None:
+    """Render the collapsible retrieved evidence panel."""
     if not evidence_list:
         return
-        
+
     with st.expander("🔍 View Retrieved Evidence (Tables, Diagrams & Raw Text)", expanded=False):
         for chunk in evidence_list:
-            c_id = chunk.get("chunk_id", "N/A")
-            
-            # Badge header
-            badges = ['<span class="badge badge-text">Text</span>']
-            if chunk.get("tables_html"):
-                badges.append(f'<span class="badge badge-table">{len(chunk["tables_html"])} Table(s)</span>')
-            if chunk.get("images_base64"):
-                badges.append(f'<span class="badge badge-image">{len(chunk["images_base64"])} Image(s)</span>')
-            
-            st.markdown(f"**Chunk {c_id}** " + " ".join(badges), unsafe_allow_html=True)
-            
-            # Tabbed view for clean inspection
-            tabs = st.tabs(["📄 Raw Text", "📊 Tables", "🖼️ Diagrams", "💡 AI Search Summary"])
-            
-            # Tab 1: Text
-            with tabs[0]:
-                raw_text = chunk.get("raw_text", "").strip()
-                if raw_text:
-                    st.markdown(raw_text)
-                else:
-                    st.caption("No standalone narrative text in this chunk.")
-            
-            # Tab 2: Tables
-            with tabs[1]:
-                tables = chunk.get("tables_html", [])
-                if tables:
-                    for t_i, tbl in enumerate(tables):
-                        st.markdown(f"**Table {t_i+1}**")
-                        st.markdown(tbl, unsafe_allow_html=True)
-                else:
-                    st.caption("No tables in this chunk.")
-            
-            # Tab 3: Images
-            with tabs[2]:
-                images = chunk.get("images_base64", [])
-                if images:
-                    for img_i, img_b64 in enumerate(images):
-                        try:
-                            img = decode_base64_image(img_b64)
-                            st.image(img, caption=f"Extracted Diagram {img_i+1}", use_container_width=True)
-                        except Exception as e:
-                            st.caption(f"Error rendering diagram {img_i+1}: {e}")
-                else:
-                    st.caption("No images or diagrams in this chunk.")
-            
-            # Tab 4: Search Summary
-            with tabs[3]:
-                summary = chunk.get("search_summary", "").strip()
-                if summary:
-                    st.info(summary)
-                else:
-                    st.caption("No summary recorded.")
-            
-            st.divider()
+            _render_single_chunk(chunk)
 
 
 # --- DISPLAY CHAT HISTORY ---
@@ -262,25 +272,24 @@ if prompt := st.chat_input("Ask a question about the document..."):
             st.markdown(prompt)
 
         # 2. Assistant Response
-        with st.chat_message("assistant", avatar="🧠"):
-            with st.spinner("Searching document & synthesizing grounded answer..."):
-                # Retrieve chunks
-                retrieved_docs = retrieve_relevant_documents(
-                    query=prompt,
-                    vector_store=st.session_state.vector_store,
-                    top_k=top_k
-                )
-                unpacked_evidence = unpack_retrieved_content(retrieved_docs)
-                
-                # Generate answer with multimodal ground truth
-                answer = generate_final_answer(prompt, retrieved_docs)
+        with st.chat_message("assistant", avatar="🧠"), st.spinner("Searching document & synthesizing grounded answer..."):
+            # Retrieve chunks
+            retrieved_docs = retrieve_relevant_documents(
+                query=prompt,
+                vector_store=st.session_state.vector_store,
+                top_k=top_k
+            )
+            unpacked_evidence = unpack_retrieved_content(retrieved_docs)
+            
+            # Generate answer with multimodal ground truth
+            answer = generate_final_answer(prompt, retrieved_docs)
 
-                # Render answer cleanly
-                st.markdown(answer)
+            # Render answer cleanly
+            st.markdown(answer)
 
-                # Render evidence block
-                if show_sources and unpacked_evidence:
-                    render_evidence_block(unpacked_evidence)
+            # Render evidence block
+            if show_sources and unpacked_evidence:
+                render_evidence_block(unpacked_evidence)
 
         # 3. Save assistant message to state
         st.session_state.messages.append({
